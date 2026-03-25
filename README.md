@@ -20,7 +20,7 @@ Takes a user’s FPL team as input and suggests the best captain choice. The rec
 
 - Python
 - Data handling and analysis libraries (e.g., pandas, numpy)
-- Any APIs or datasets used for FPL data
+- FPL API
 
 ## Future Improvements
 
