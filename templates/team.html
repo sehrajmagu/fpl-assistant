@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Team View — FPL Assistant{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1>Team View</h1>
+    <p>Browse the full squad of any Premier League club.</p>
+</div>
+
+<div class="card" style="max-width: 400px; margin-bottom: 2rem;">
+    <div class="form-group" style="margin-bottom:0">
+        <label>Select a team</label>
+        <select id="teamSelect" onchange="loadTeam(this.value)">
+            <option value="">— Pick a team —</option>
+            {% for t in teams %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div id="teamTable"></div>
+
+<script>
+function loadTeam(team) {
+    if (!team) return;
+    document.getElementById('teamTable').innerHTML = '<div class="loading">Loading...</div>';
+    fetch(`/team-data?team=${encodeURIComponent(team)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.length) { document.getElementById('teamTable').innerHTML = '<p class="text-muted">No data found.</p>'; return; }
+            const cols = Object.keys(data[0]);
+            let html = `<div class="table-wrap"><table><thead><tr>`;
+            cols.forEach(c => html += `<th>${c}</th>`);
+            html += `</tr></thead><tbody>`;
+            data.forEach(row => {
+                html += `<tr>`;
+                cols.forEach(c => {
+                    if (c === 'Position') html += `<td><span class="pos-badge ${row[c]}">${row[c]}</span></td>`;
+                    else if (c === 'Total Points') html += `<td class="pts-cell">${row[c]}</td>`;
+                    else html += `<td>${row[c]}</td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table></div>`;
+            document.getElementById('teamTable').innerHTML = html;
+        });
+}
+</script>
+
+{% endblock %}

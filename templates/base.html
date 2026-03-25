@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FPL Assistant{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-logo">⚽ FPL <span>Assistant</span></a>
+        <div class="nav-links">
+            <a href="/" class="nav-link {% if request.path == '/' %}active{% endif %}">Home</a>
+            <a href="/top-players" class="nav-link {% if request.path == '/top-players' %}active{% endif %}">Top Players</a>
+            <a href="/team" class="nav-link {% if request.path == '/team' %}active{% endif %}">Team View</a>
+            <a href="/compare" class="nav-link {% if request.path == '/compare' %}active{% endif %}">Compare</a>
+            <a href="/captain" class="nav-link {% if request.path == '/captain' %}active{% endif %}">Captain Picker</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

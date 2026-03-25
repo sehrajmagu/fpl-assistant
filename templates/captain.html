@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Captain Picker — FPL Assistant{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1>Captain Picker</h1>
+    <p>Select your 15 players and get a data-driven captain recommendation.</p>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div id="selectors">
+            <p class="text-muted" style="margin-bottom:1rem">Loading players...</p>
+        </div>
+        <button class="btn mt-1" onclick="getCaptain()" style="width:100%">Get Captain Recommendation</button>
+    </div>
+
+    <div>
+        <div class="pitch" id="pitch">
+            <div class="pitch-row" id="pitch-fwd"></div>
+            <div class="pitch-row" id="pitch-mid"></div>
+            <div class="pitch-row" id="pitch-def"></div>
+            <div class="pitch-row" id="pitch-gk"></div>
+        </div>
+        <div id="captainResult"></div>
+    </div>
+</div>
+
+<script>
+let allPlayers = {};
+let positionMap = { GK: [], DEF: [], MID: [], FWD: [] };
+
+fetch('/all-players-json')
+    .then(r => r.json())
+    .then(players => {
+        allPlayers = players;
+        players.forEach(p => { if (positionMap[p.Position]) positionMap[p.Position].push(p); });
+        buildSelectors();
+    });
+
+function buildSelectors() {
+    const slots = [
+        { pos: 'GK', count: 2, label: 'Goalkeepers' },
+        { pos: 'DEF', count: 5, label: 'Defenders' },
+        { pos: 'MID', count: 5, label: 'Midfielders' },
+        { pos: 'FWD', count: 3, label: 'Forwards' },
+    ];
+    let html = '';
+    slots.forEach(({ pos, count, label }) => {
+        html += `<p style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:1rem 0 0.5rem">${label}</p>`;
+        for (let i = 0; i < count; i++) {
+            html += `<div class="form-group" style="margin-bottom:0.5rem">
+                <select id="${pos}${i}" onchange="updatePitch()" style="font-size:0.85rem;padding:0.5rem 0.75rem">
+                    <option value="">— ${pos} ${i+1} —</option>
+                    ${positionMap[pos].map(p => `<option value="${p.web_name}">${p.web_name} — ${p.Team}</option>`).join('')}
+                </select>
+            </div>`;
+        }
+    });
+    document.getElementById('selectors').innerHTML = html;
+}
+
+function getSelected() {
+    const slots = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
+    const team = [];
+    for (const [pos, count] of Object.entries(slots)) {
+        for (let i = 0; i < count; i++) {
+            const val = document.getElementById(`${pos}${i}`)?.value;
+            if (val) team.push({ pos, name: val });
+        }
+    }
+    return team;
+}
+
+function updatePitch() {
+    const selected = getSelected();
+    ['GK','DEF','MID','FWD'].forEach(pos => {
+        const row = document.getElementById(`pitch-${pos.toLowerCase()}`);
+        const players = selected.filter(p => p.pos === pos);
+        row.innerHTML = players.map(p => `
+            <div class="player-chip">
+                <div class="chip-name">${p.name}</div>
+                <div class="chip-pos">${p.pos}</div>
+            </div>`).join('');
+    });
+}
+
+function getCaptain() {
+    const selected = getSelected();
+    if (selected.length < 11) { alert('Please select at least 11 players.'); return; }
+    fetch('/get-captain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ players: selected })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('captainResult').innerHTML = `
+            <div class="captain-result">
+                <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-bottom:0.5rem">Captain Pick</div>
+                <div class="player-name">${data.name}</div>
+                <div class="player-pos">${data.position}</div>
+                <div class="score">Captain Score: <span>${data.score}</span></div>
+            </div>`;
+    });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}FPL Assistant — Home{% endblock %}
+{% block content %}
+
+<div class="hero">
+    <h1>YOUR FPL<br><span>EDGE.</span></h1>
+    <p>Live data, smart captaincy picks, and deep player stats — everything you need to dominate your mini-league.</p>
+
+    <div class="hero-cards">
+        <a href="/top-players" class="feature-card">
+            <div class="icon">📊</div>
+            <h3>Top Players</h3>
+            <p>The 15 highest scoring players in FPL right now, with live fixture data.</p>
+        </a>
+        <a href="/team" class="feature-card">
+            <div class="icon">🏟️</div>
+            <h3>Team View</h3>
+            <p>Browse the full squad of any Premier League team and their stats.</p>
+        </a>
+        <a href="/compare" class="feature-card">
+            <div class="icon">⚔️</div>
+            <h3>Compare Players</h3>
+            <p>Head-to-head stat comparison between any two players in the league.</p>
+        </a>
+        <a href="/captain" class="feature-card">
+            <div class="icon">©️</div>
+            <h3>Captain Picker</h3>
+            <p>Build your squad and get a data-driven captain recommendation.</p>
+        </a>
+    </div>
+</div>
+
+{% endblock %}

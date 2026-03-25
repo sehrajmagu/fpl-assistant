@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Compare Players — FPL Assistant{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1>Compare Players</h1>
+    <p>Head-to-head stats between any two players.</p>
+</div>
+
+<div class="grid-2" style="margin-bottom: 2rem;">
+    <div class="card">
+        <div class="form-group">
+            <label>Player 1 — Team</label>
+            <select id="team1" onchange="loadPlayers(1)">
+                <option value="">— Select team —</option>
+                {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+            <label>Player 1</label>
+            <select id="player1"><option value="">— Select player —</option></select>
+        </div>
+    </div>
+    <div class="card">
+        <div class="form-group">
+            <label>Player 2 — Team</label>
+            <select id="team2" onchange="loadPlayers(2)">
+                <option value="">— Select team —</option>
+                {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+            <label>Player 2</label>
+            <select id="player2"><option value="">— Select player —</option></select>
+        </div>
+    </div>
+</div>
+
+<button class="btn" onclick="comparePlayers()">Compare ⚔️</button>
+
+<div id="compareResult" class="mt-2"></div>
+
+<script>
+function loadPlayers(num) {
+    const team = document.getElementById(`team${num}`).value;
+    if (!team) return;
+    fetch(`/players-by-team?team=${encodeURIComponent(team)}`)
+        .then(r => r.json())
+        .then(players => {
+            const sel = document.getElementById(`player${num}`);
+            sel.innerHTML = '<option value="">— Select player —</option>';
+            players.forEach(p => sel.innerHTML += `<option value="${p}">${p}</option>`);
+        });
+}
+
+function comparePlayers() {
+    const p1 = document.getElementById('player1').value;
+    const p2 = document.getElementById('player2').value;
+    if (!p1 || !p2) { alert('Please select both players.'); return; }
+
+    fetch(`/compare-data?p1=${encodeURIComponent(p1)}&p2=${encodeURIComponent(p2)}`)
+        .then(r => r.json())
+        .then(data => {
+            const stats = data.stats;
+            const keys = Object.keys(stats[0]).filter(k => k !== 'Name');
+            let html = `
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
+                        <div style="font-family:var(--font-head);font-size:1.5rem;color:var(--accent)">${stats[0].Name}</div>
+                        <div style="font-family:var(--font-head);font-size:1.5rem;color:#ff6b6b">${stats[1].Name}</div>
+                    </div>`;
+            keys.forEach(k => {
+                const v1 = parseFloat(stats[0][k]) || stats[0][k];
+                const v2 = parseFloat(stats[1][k]) || stats[1][k];
+                const w1 = typeof v1 === 'number' && v1 > v2 ? 'winner' : '';
+                const w2 = typeof v2 === 'number' && v2 > v1 ? 'winner' : '';
+                html += `<div class="compare-stat">
+                    <div class="val ${w1}">${stats[0][k]}</div>
+                    <div class="stat-label" style="text-align:center">${k}</div>
+                    <div class="val ${w2}">${stats[1][k]}</div>
+                </div>`;
+            });
+            html += `</div>`;
+            document.getElementById('compareResult').innerHTML = html;
+        });
+}
+</script>
+
+{% endblock %}

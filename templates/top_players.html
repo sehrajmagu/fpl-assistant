@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Top Players — FPL Assistant{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1>Top Players</h1>
+    <p>The 15 highest scoring players in FPL right now — live data.</p>
+</div>
+
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Team</th>
+                <th>Pos</th>
+                <th>Price</th>
+                <th>Form</th>
+                <th>Goals</th>
+                <th>Assists</th>
+                <th>Clean Sheets</th>
+                <th>Total Pts</th>
+                <th>Next Fixture</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i, p in enumerate(table) %}
+            <tr>
+                <td class="rank-cell">{{ i + 1 }}</td>
+                <td><strong>{{ p['Name'] }}</strong></td>
+                <td>{{ p['Team'] }}</td>
+                <td><span class="pos-badge {{ p['Position'] }}">{{ p['Position'] }}</span></td>
+                <td>£{{ p['Price'] }}m</td>
+                <td>{{ p['Form'] }}</td>
+                <td>{{ p['Goals'] }}</td>
+                <td>{{ p['Assists'] }}</td>
+                <td>{{ p['Clean Sheets'] }}</td>
+                <td class="pts-cell">{{ p['Total Points'] }}</td>
+                <td class="text-muted">{{ p['Next Fixture'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
