@@ -4,10 +4,10 @@ import pandas as pd
 
 app = Flask(__name__)
 
-# Cache data so we don't hammer the API on every request
-_cache = {}
 
-def get_data():
+_cache = {} #self defined cache dictionary
+
+def get_data():  
     if 'data' not in _cache:
         _cache['data'] = fetch_fpl_data()
     return _cache['data']
@@ -17,6 +17,9 @@ def get_players_df():
         _cache['players_df'] = get_all_players()
     return _cache['players_df']
 
+'''if we've never fetched the data before:
+    go get it from the API and store it
+return whatever is stored'''
 # ── Pages ──────────────────────────────────────────────
 
 @app.route('/')
@@ -75,18 +78,18 @@ def compare_data():
     def get_stats(name):
         row = players[players['web_name'] == name].iloc[0]
         return {
-            'Name': row['web_name'],
-            'Team': row['team_name'],
-            'Price (£m)': row['now_cost'] / 10,
-            'Total Points': row['total_points'],
-            'PPG': row['points_per_game'],
-            'Goals': row['goals_scored'],
-            'Assists': row['assists'],
-            'Clean Sheets': row['clean_sheets'],
-            'ICT Index': row['ict_index'],
-            'Threat': row['threat'],
-            'Creativity': row['creativity'],
-            'Influence': row['influence'],
+            'Name': str(row['web_name']),
+            'Team': str(row['team_name']),
+            'Price (£m)': float(row['now_cost'] / 10),
+            'Total Points': int(row['total_points']),
+            'PPG': str(row['points_per_game']),
+            'Goals': int(row['goals_scored']),
+            'Assists': int(row['assists']),
+            'Clean Sheets': int(row['clean_sheets']),
+            'ICT Index': str(row['ict_index']),
+            'Threat': str(row['threat']),
+            'Creativity': str(row['creativity']),
+            'Influence': str(row['influence']),
         }
 
     return jsonify({'stats': [get_stats(p1_name), get_stats(p2_name)]})
