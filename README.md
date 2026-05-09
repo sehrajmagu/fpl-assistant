@@ -1,6 +1,7 @@
 # FPL Assistant
 
 A Python-based tool designed to help Fantasy Premier League (FPL) players make more informed decisions using player and team performance data.
+https://fpl-assistant.vercel.app/
 
 ## Features
 
