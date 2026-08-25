@@ -4,17 +4,10 @@
 
 <div class="page-header">
     <h1>Captain Picker</h1>
-    <p>Select your 15 players and get a data-driven captain recommendation.</p>
+    <p>Build your 15-man squad and get a data-driven captain recommendation.</p>
 </div>
 
-<div class="grid-2">
-    <div class="card">
-        <div id="selectors">
-            <p class="text-muted" style="margin-bottom:1rem">Loading players...</p>
-        </div>
-        <button class="btn mt-1" onclick="getCaptain()" style="width:100%">Get Captain Recommendation</button>
-    </div>
-
+<div class="grid-2 captain-layout">
     <div>
         <div class="pitch" id="pitch">
             <div class="pitch-row" id="pitch-fwd"></div>
@@ -22,71 +15,190 @@
             <div class="pitch-row" id="pitch-def"></div>
             <div class="pitch-row" id="pitch-gk"></div>
         </div>
+        <button class="btn mt-1" id="getCaptainBtn" style="width:100%">Get Captain Recommendation</button>
         <div id="captainResult"></div>
+    </div>
+
+    <div class="card search-panel">
+        <p class="search-title">Find a player</p>
+        <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="playerSearch" placeholder="Search by name">
+        </div>
+        <div class="filter-tabs" id="filterTabs">
+            <button class="filter-tab active" data-pos="ALL">All players</button>
+            <button class="filter-tab" data-pos="GK">GKP</button>
+            <button class="filter-tab" data-pos="DEF">DEF</button>
+            <button class="filter-tab" data-pos="MID">MID</button>
+            <button class="filter-tab" data-pos="FWD">FWD</button>
+        </div>
+        <div class="search-count-bar" id="searchCount">Loading players...</div>
+        <div class="player-search-list" id="searchResults"></div>
     </div>
 </div>
 
 <script>
-let allPlayers = {};
-let positionMap = { GK: [], DEF: [], MID: [], FWD: [] };
+const SLOT_COUNTS = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
+const POS_LABEL = { GK: 'GKP', DEF: 'DEF', MID: 'MID', FWD: 'FWD' };
+
+// [primary, secondary] home shirt colours per club
+const TEAM_COLORS = {
+    ARS: ['#EF0107', '#FFFFFF'], AVL: ['#670E36', '#95BFE5'], BHA: ['#0057B8', '#FFFFFF'],
+    BOU: ['#DA291C', '#000000'], BRE: ['#D71920', '#FFFFFF'], CHE: ['#034694', '#FFFFFF'],
+    COV: ['#78BFE8', '#041E42'], CRY: ['#1B458F', '#C4122E'], EVE: ['#003399', '#FFFFFF'],
+    FUL: ['#FFFFFF', '#000000'], HUL: ['#F5A623', '#000000'], IPS: ['#1D4F9F', '#FFFFFF'],
+    LEE: ['#FFFFFF', '#1D428A'], LIV: ['#C8102E', '#FFFFFF'], MCI: ['#6CABDD', '#1C2C5B'],
+    MUN: ['#DA291C', '#000000'], NEW: ['#241F20', '#FFFFFF'], NFO: ['#DD0000', '#FFFFFF'],
+    SUN: ['#EB172B', '#FFFFFF'], TOT: ['#FFFFFF', '#132257'],
+};
+const DEFAULT_COLORS = ['#5c1a6b', 'rgba(255,255,255,0.3)'];
+
+function teamColors(code) {
+    return TEAM_COLORS[code] || DEFAULT_COLORS;
+}
+
+let allPlayers = [];
+let squad = {
+    GK: Array(SLOT_COUNTS.GK).fill(null),
+    DEF: Array(SLOT_COUNTS.DEF).fill(null),
+    MID: Array(SLOT_COUNTS.MID).fill(null),
+    FWD: Array(SLOT_COUNTS.FWD).fill(null),
+};
+let activeFilter = 'ALL';
 
 fetch('/all-players-json')
     .then(r => r.json())
     .then(players => {
         allPlayers = players;
-        players.forEach(p => { if (positionMap[p.Position]) positionMap[p.Position].push(p); });
-        buildSelectors();
+        renderPitch();
+        renderSearchResults();
     });
 
-function buildSelectors() {
-    const slots = [
-        { pos: 'GK', count: 2, label: 'Goalkeepers' },
-        { pos: 'DEF', count: 5, label: 'Defenders' },
-        { pos: 'MID', count: 5, label: 'Midfielders' },
-        { pos: 'FWD', count: 3, label: 'Forwards' },
-    ];
-    let html = '';
-    slots.forEach(({ pos, count, label }) => {
-        html += `<p style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:1rem 0 0.5rem">${label}</p>`;
-        for (let i = 0; i < count; i++) {
-            html += `<div class="form-group" style="margin-bottom:0.5rem">
-                <select id="${pos}${i}" onchange="updatePitch()" style="font-size:0.85rem;padding:0.5rem 0.75rem">
-                    <option value="">— ${pos} ${i+1} —</option>
-                    ${positionMap[pos].map(p => `<option value="${p.web_name}">${p.web_name} — ${p.Team}</option>`).join('')}
-                </select>
-            </div>`;
-        }
-    });
-    document.getElementById('selectors').innerHTML = html;
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function getSelected() {
-    const slots = { GK: 2, DEF: 5, MID: 5, FWD: 3 };
-    const team = [];
-    for (const [pos, count] of Object.entries(slots)) {
-        for (let i = 0; i < count; i++) {
-            const val = document.getElementById(`${pos}${i}`)?.value;
-            if (val) team.push({ pos, name: val });
-        }
-    }
-    return team;
+function isSelected(webName) {
+    return Object.values(squad).some(slots => slots.some(p => p && p.web_name === webName));
 }
 
-function updatePitch() {
-    const selected = getSelected();
-    ['GK','DEF','MID','FWD'].forEach(pos => {
+function renderPitch() {
+    ['FWD', 'MID', 'DEF', 'GK'].forEach(pos => {
         const row = document.getElementById(`pitch-${pos.toLowerCase()}`);
-        const players = selected.filter(p => p.pos === pos);
-        row.innerHTML = players.map(p => `
-            <div class="player-chip">
-                <div class="chip-name">${p.name}</div>
-                <div class="chip-pos">${p.pos}</div>
-            </div>`).join('');
+        row.innerHTML = squad[pos].map((p, i) => {
+            if (!p) {
+                return `<div class="slot empty" data-pos="${pos}">
+                    <span class="plus">+</span>
+                    <span class="slot-label">${pos} ${i + 1}</span>
+                </div>`;
+            }
+            const [primary, secondary] = teamColors(p.TeamCode);
+            return `<div class="slot filled">
+                <button class="remove-btn" data-pos="${pos}" data-index="${i}">&times;</button>
+                <div class="price-tag">£${p.Price.toFixed(1)}m</div>
+                <div class="jersey jersey-shape" style="background:${primary};border-color:${secondary}"></div>
+                <div class="slot-name">${escapeHtml(p.web_name)}</div>
+                <div class="slot-club">${escapeHtml(p.TeamCode || p.Team)}</div>
+            </div>`;
+        }).join('');
     });
 }
+
+function renderSearchResults() {
+    const query = document.getElementById('playerSearch').value.trim().toLowerCase();
+    let players = allPlayers.filter(p => p.web_name.toLowerCase().includes(query));
+    if (activeFilter !== 'ALL') players = players.filter(p => p.Position === activeFilter);
+    players = players.slice().sort((a, b) => b.total_points - a.total_points);
+
+    document.getElementById('searchCount').textContent = `${players.length} player${players.length === 1 ? '' : 's'} shown`;
+
+    const groups = activeFilter === 'ALL'
+        ? [['GK', 'Goalkeepers'], ['DEF', 'Defenders'], ['MID', 'Midfielders'], ['FWD', 'Forwards']]
+        : [[activeFilter, null]];
+
+    let html = '';
+    groups.forEach(([pos, label]) => {
+        const rows = players.filter(p => p.Position === pos);
+        if (!rows.length) return;
+        if (label) html += `<p class="search-group-label">${label}</p>`;
+        rows.forEach(p => {
+            const selected = isSelected(p.web_name);
+            const full = squad[p.Position].every(s => s !== null);
+            const flagged = p.status !== 'a';
+            const [primary, secondary] = teamColors(p.TeamCode);
+            html += `<div class="player-row${flagged ? ' is-flagged' : ''}">
+                <div class="jersey-mini" style="background:${primary};border-color:${secondary}"></div>
+                <div class="player-row-info">
+                    <div class="player-row-name">${escapeHtml(p.web_name)}</div>
+                    <div class="player-row-meta">${escapeHtml(p.TeamCode || p.Team)} &bull; ${POS_LABEL[p.Position]}</div>
+                </div>
+                <div class="player-row-stats">
+                    <div class="stat-price">£${p.Price.toFixed(1)}m</div>
+                    <div class="stat-points">${p.total_points} pts</div>
+                </div>
+                <button class="add-btn${selected ? ' added' : ''}" data-name="${escapeHtml(p.web_name)}" data-pos="${p.Position}" ${(full && !selected) ? 'disabled' : ''}>${selected ? '&check;' : '+'}</button>
+            </div>`;
+        });
+    });
+    document.getElementById('searchResults').innerHTML = html || '<p class="text-muted" style="padding:1rem 0">No players found.</p>';
+}
+
+function addPlayer(webName, pos) {
+    if (isSelected(webName)) return;
+    const idx = squad[pos].findIndex(s => s === null);
+    if (idx === -1) { alert(`You already have ${SLOT_COUNTS[pos]} ${pos}s selected.`); return; }
+    const player = allPlayers.find(p => p.web_name === webName && p.Position === pos);
+    if (!player) return;
+    squad[pos][idx] = player;
+    renderPitch();
+    renderSearchResults();
+}
+
+function removePlayer(pos, index) {
+    squad[pos][index] = null;
+    renderPitch();
+    renderSearchResults();
+}
+
+document.getElementById('playerSearch').addEventListener('input', renderSearchResults);
+
+document.getElementById('filterTabs').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-tab');
+    if (!btn) return;
+    activeFilter = btn.dataset.pos;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.toggle('active', t === btn));
+    renderSearchResults();
+});
+
+document.getElementById('searchResults').addEventListener('click', e => {
+    const btn = e.target.closest('.add-btn');
+    if (!btn || btn.disabled) return;
+    addPlayer(btn.dataset.name, btn.dataset.pos);
+});
+
+document.getElementById('pitch').addEventListener('click', e => {
+    const removeBtn = e.target.closest('.remove-btn');
+    if (removeBtn) { removePlayer(removeBtn.dataset.pos, Number(removeBtn.dataset.index)); return; }
+    const emptySlot = e.target.closest('.slot.empty');
+    if (emptySlot) {
+        const pos = emptySlot.dataset.pos;
+        activeFilter = pos;
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.toggle('active', t.dataset.pos === pos));
+        document.getElementById('playerSearch').focus();
+        renderSearchResults();
+    }
+});
+
+document.getElementById('getCaptainBtn').addEventListener('click', getCaptain);
 
 function getCaptain() {
-    const selected = getSelected();
+    const selected = [];
+    Object.entries(squad).forEach(([pos, slots]) => {
+        slots.forEach(p => { if (p) selected.push({ pos, name: p.web_name }); });
+    });
     if (selected.length < 11) { alert('Please select at least 11 players.'); return; }
     fetch('/get-captain', {
         method: 'POST',
@@ -98,8 +210,8 @@ function getCaptain() {
         document.getElementById('captainResult').innerHTML = `
             <div class="captain-result">
                 <div style="font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;color:var(--text-muted);margin-bottom:0.5rem">Captain Pick</div>
-                <div class="player-name">${data.name}</div>
-                <div class="player-pos">${data.position}</div>
+                <div class="player-name">${escapeHtml(data.name)}</div>
+                <div class="player-pos">${escapeHtml(data.position)}</div>
                 <div class="score">Captain Score: <span>${data.score}</span></div>
             </div>`;
     });

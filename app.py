@@ -99,12 +99,15 @@ def all_players_json():
     data = get_data()
     players = pd.DataFrame(data['elements'])
     teams = {t['id']: t['name'] for t in data['teams']}
+    team_codes = {t['id']: t['short_name'] for t in data['teams']}
     position_map = {1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD'}
     players['Team'] = players['team'].map(teams)
+    players['TeamCode'] = players['team'].map(team_codes)
     players['Position'] = players['element_type'].map(position_map)
-    result = players[['web_name', 'Team', 'Position', 'form', 'total_points',
+    players['Price'] = players['now_cost'] / 10
+    result = players[['web_name', 'Team', 'TeamCode', 'Position', 'Price', 'form', 'total_points',
                        'expected_goal_involvements', 'status']].copy()
-    result.columns = ['web_name', 'Team', 'Position', 'form', 'total_points', 'xGI', 'status']
+    result.columns = ['web_name', 'Team', 'TeamCode', 'Position', 'Price', 'form', 'total_points', 'xGI', 'status']
     return jsonify(result.to_dict(orient='records'))
 
 @app.route('/get-captain', methods=['POST'])
