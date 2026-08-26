@@ -1,2 +1,4 @@
-journal.md
-src/data/
+venv/
+data/
+__pycache__/
+*.pyc
